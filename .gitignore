@@ -192,4 +192,4 @@ pyrightconfig.json
 
 # Fin de https://www.toptal.com/developers/gitignore/api/python,git,dotenv
 
-.env
+*.json
