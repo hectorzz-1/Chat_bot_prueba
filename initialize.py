@@ -39,7 +39,7 @@ class JsonInit(ABC):
         data = self.empty_validate(self.file)
         if not data:
             with open(self.file, "w") as json_file:
-                json.dump(self.set_content(), json_file, indent=4)
+                json.dump([self.set_content()], json_file, indent=4)
             return True
         return False
 
@@ -57,6 +57,7 @@ class JsonInitConfig(JsonInit) :
     max_tokens: int = 350
     presence_penalty: float = 0.4
     frequency_penalty: float = 0.4
+    name : str = "new chat"
     file: str = field(default="config.json", metadata={"exclude": True})
 
     def initialize(self):
@@ -68,9 +69,14 @@ class JsonInitConfig(JsonInit) :
 # si el diccionario no estaba vacío = False
 @dataclass
 class JsonInitShortMemory(JsonInit):
-    role: str ="system"
+    rol: str ="system"
     content: str ="Un asistente amigable que busca ayudar al resto"
     file: str = field(default="memory.json", metadata={"exclude": True})
 
     def initialize(self):
         return self.init_default()
+    
+
+if __name__ == "__main__":
+    g = JsonInitConfig()
+    print(g.initialize())

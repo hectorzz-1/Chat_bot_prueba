@@ -13,4 +13,9 @@ class ConnectBrain :
 
 
     def connect(self):
-        return OpenAI(self.key)
+        return OpenAI(api_key=self.key)
+    
+
+if __name__ == "__main__":
+    c = ConnectBrain()
+    print(c.connect())

@@ -88,14 +88,15 @@ class JsonSettingsRepository(ISettingsRepository):
     
     # Guarda actualiza los datos de un archivo
     # se le tiene que pasar el argumento data(Los datos a actualizar)
-    def save(self, data: dict):
+    def save(self, data: list):
         with open(self.file, "w") as f:
             json.dump(data, f, indent=4)
 
 
 class SaveSettingChat:
-    def __init__(self, repository: ISettingsRepository):
+    def __init__(self, repository: ISettingsRepository, chat: str):
         self.repository = repository
+        self.chat = chat
         self.settings = {}
 
     # 
@@ -107,13 +108,29 @@ class SaveSettingChat:
         return self.settings
 
     # Esta funcion guarda las configuraciones
-    # si el file no existia o estba vacio retorna False
+    # si el file no existia o estaba vacio retorna False
     def save(self):
         data = self.repository.load()
         if data == False:
-            return data
-        else:
-            data.update(self.settings)
-            self.repository.save(data)
-  
+            return False
+
+        # Buscar el índice del chat en la lista
+        for i, chat in enumerate(data):
+            if chat.get("name") == self.chat:
+                data[i].update(self.settings)
+                break
+
+        # Guardar la lista completa
+        self.repository.save(data)
+        return True
+
+if __name__ == "__main__":
     
+    cn = "new chat"
+    jsr = JsonSettingsRepository("config.json")
+    ffj = SaveSettingChat(jsr, cn)
+
+    ffj.add(setter=MaxTokensSetter(), value=124)
+    ffj.add(setter=TemperaturaSetter(), value=1.0)
+
+    print(ffj.save())  # True
