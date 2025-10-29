@@ -62,7 +62,6 @@ if __name__ == "__main__":
         {"role": "assistant", "content": "Un gusto Héctor, ¿en que puedo ayudarte hoy?"},
         {"role": "user", "content": "se me ólvido mi nombre me lo recuerdas?"}
     ]
-    a = OpenAI(api_key="")
     m = "gpt-4o-mini"
     q = {
         "temperature": 1.0,
@@ -72,9 +71,7 @@ if __name__ == "__main__":
         "name": "new chat"
     }
 
-    c = MediunQuerie(api=a, history=h,model=m,config=q)
+    c = MediunQuerie(history=h,model=m,config=q)
     fg = c.make_querie()
     print(fg)
-
-
 
