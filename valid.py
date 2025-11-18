@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 class TokensValid:
 
 
-    def __init__(self, tokens: int, max_tokens: int = 25):
+    def __init__(self, tokens: int, max_tokens: int = 250):
         # Validaciones
         if not isinstance(tokens, int):
             raise TypeError("El valor de 'tokens' debe ser un número entero.")

@@ -33,17 +33,15 @@ class BasicQuierie(Querie):
 
 class MediunQuerie(Querie):
     
-    def __init__(self,api, history:list, model:str, config:dict):
+    def __init__(self,api, config:dict):
         self.api = api
-        self.history = history
-        self.model = model
         self.config = config
 
     def make_querie(self) -> dict:
         try: 
             response = self.api.chat.completions.create(
-                model=self.model,
-                messages=self.history,
+                model=self.config["model"],
+                messages=self.config["memory"],
                 temperature=self.config["temperature"],
                 max_tokens=self.config["max_tokens"],
                 presence_penalty=self.config["presence_penalty"],
@@ -51,6 +49,30 @@ class MediunQuerie(Querie):
             )
             return response.choices[0].message.content
         
+        except Exception as e:
+            return f"Error: {str(e)}"
+        
+
+class HardQuerie(Querie):
+
+    def __init__(self,brain : str, agent:dict):
+        self.brain = brain
+        self.agent = agent
+    
+    def make_querie(self):
+        try:
+
+            response = self.brain.chat.completions.create(
+                model=self.agent["model"],
+                messages=self.agent["memory"],
+                temperature=self.agent["temperature"],
+                max_tokens=self.agent["max_tokens"],
+                presence_penalty=self.agent["presence_penalty"],
+                frequency_penalty=self.agent["frequency_penalty"]
+            )
+
+            return response.choices[0].message.content
+    
         except Exception as e:
             return f"Error: {str(e)}"
     

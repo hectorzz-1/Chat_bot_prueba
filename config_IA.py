@@ -4,7 +4,6 @@
 import json, os
 from abc import ABC, abstractmethod
 
-
 # Clase hija de los parametros de configuración
 class Setter(ABC):
     
@@ -60,11 +59,34 @@ class ModelSetter(Setter):
         return {"model" : data}
     
 
-# Obtener la nombre
+# Obtener el nombre
 class NameSetter(Setter):
 
     def set(self,data : str):
         return {"name" : data}
+    
+
+# colocar un comportamiento
+class BehaviorSetter(Setter):
+
+    def set(self,data : str):
+        return {"memory": [{
+            "role": "system",
+            "content": data
+        }]}
+    
+# Colocará una instruccion en el comportamiento del agente
+# esta siempre irá antes del comportamiento que el usuario
+# le haya dado.
+# entre la instruccion y el comportamiento habrá un ; para poder
+# manejar mejor cual es cual en un futuro.
+class InstructionSetter:
+
+    def set(self,agent: dict, inst : str = ""):
+        behavior = agent["memory"][0]["content"]
+        agent["memory"][0]["content"] = inst+ " ; "+behavior
+        return agent
+
 
 
 # Clase hija de ISettingsRepository
@@ -124,13 +146,18 @@ class SaveSettingChat:
         self.repository.save(data)
         return True
 
+
+
 if __name__ == "__main__":
     
-    cn = "new chat"
+    name = "new chat"
     jsr = JsonSettingsRepository("config.json")
-    ffj = SaveSettingChat(jsr, cn)
+    ffj = SaveSettingChat(jsr, name)
 
-    ffj.add(setter=MaxTokensSetter(), value=124)
-    ffj.add(setter=TemperaturaSetter(), value=1.0)
+    setter = BehaviorSetter()
+    setter_dos = FrequencyPenaltySetter()
+    name = NameSetter()
 
-    print(ffj.save())  # True
+    ffj.add(setter=name,value="hola")
+
+    print(ffj.save())
