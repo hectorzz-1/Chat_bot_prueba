@@ -40,11 +40,13 @@ Las conversaciones se guardan en `history.json` como una lista de sesiones:
   {
     "date": "2025-11-13 12:45",
     "parley": [
-      {"role": "user", "content": "..."},
-      {"role": "assistant", "content": "..."}
+      { "role": "user", "content": "..." },
+      { "role": "assistant", "content": "..." }
     ]
   }
 ]
+```
+
 El sistema:
 
 Corrige automáticamente archivos dañados.
@@ -81,6 +83,8 @@ Esto garantiza que el agente mantenga siempre la regla, aunque el usuario intent
 📁 Estructura del proyecto
 pgsql
 Copiar código
+
+```json
 ├── main.py
 ├── config.json
 ├── history.json
@@ -94,6 +98,8 @@ Copiar código
 ├── make_queries.py
 ├── parley_control.py
 └── .env
+```
+
 ⚙️ Flujo de ejecución del programa
 1️⃣ Inicialización
 El archivo main.py:
@@ -201,4 +207,3 @@ Cambiar validadores
 Añadir nuevos tipos de acciones (guardar en DB, exportar PDF, etc.)
 
 Integrarlo en interfaces gráficas en el futuro
-```
