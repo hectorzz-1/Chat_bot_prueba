@@ -48,5 +48,6 @@ class tokens_querie:
 
 if __name__ == "__main__":
     
-    f = tokens_querie(querie="Claro, tu nombre es Héctor. ¿Hay", model="gpt-4o-mini")
+    f = tokens_querie(querie="Oferta de asistencia para explicar conceptos basados en la documentación oficial", model="gpt-4o-mini")
+    print(f.get_tokens())
     print(f.count_tokens())

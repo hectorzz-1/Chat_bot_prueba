@@ -17,3 +17,8 @@ class ToDict:
 
     def to_dict(self, data):
         return {self.key : data}
+    
+
+if __name__ == "__main__":
+    d = DateCheck()
+    print(d.check())
