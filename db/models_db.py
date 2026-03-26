@@ -82,7 +82,7 @@ class MessageSQLMapper:
 
 class TableConversation:
 
-    def __init__(self, id:UUID, title:str, time_start:datetime):
+    def __init__(self, id:UUID, title:str, time_start:datetime, behavior:str):
         
         # Valida que el id sea UUID
         if not isinstance(id, UUID):
@@ -98,19 +98,28 @@ class TableConversation:
         # Valida que time_start sea de tipo datetime
         if not isinstance(time_start, datetime):
             raise TypeError("'time start' must be datetime.datetime")
+        
+        # Valida que behavior sea un str
+        if not isinstance(behavior, str):
+            raise TypeError("behavior must be a string")
+        # Valida que el behavior no esté vacío
+        if not behavior.strip():
+            raise ValueError("behavior cannot be empty")
 
         # Id de la conversación
-        self.id = id # type: UUID
+        self.id = str(id) # type: UUID
         # Título de la conversación
         self.title = title # type: str
         # Hora en la que se creo la conversación
         self.time_start = time_start # type: datetime
+        # Comportamiento en la que se basa el agente para responder
+        self.behavior = behavior # type: str
 
 
 class ConversationSQLMapper:
 
     # La columnas de la tabla
-    COLUMNS = ("id", "title", "time_start")
+    COLUMNS = ("id", "title", "time_start", "behavior")
 
     # Se le tiene que pasar un objeto de tipo TableConversation
     # y usara los datos para ordenar los datos en una tupla
@@ -119,7 +128,8 @@ class ConversationSQLMapper:
         return (
             message.id,
             message.title,
-            message.time_start
+            message.time_start,
+            message.behavior
         )
     
     # Se llama así ConversationSQLMapper.from_row(row)
@@ -129,7 +139,8 @@ class ConversationSQLMapper:
         # Se crea un objeto valido y lo retorna
         return cls( id=row[0],
                     title=row[1],
-                    time_start=row[2]
+                    time_start=row[2],
+                    behavior=row[3]
                 )
 
 

@@ -6,7 +6,14 @@ import valid_queries
 import make_queries
 import connection
 import actions
-import parley_control
+
+# base de datos
+from db.initialize_db import DataBaseMCB
+from db.tables_db.message_repository import MessageRepository
+from db.tables_db.conversation_repository import ConversationRepository
+from db.models_db import (MessageSQLMapper, TableMessenge,
+                          TableConversation, ConversationSQLMapper)
+from db.get_data import generate_uuid, generate_date
 
 import os
 from dotenv import load_dotenv
@@ -14,11 +21,12 @@ import json
 
 load_dotenv()
 
-api_OAI = os.getenv("API_KEY_OPENAI")
+
 config_name = "config.json"
 chat_name_df = "new chat"
 history_chat = "history.json"
-tokens_limit_chat = 30000
+# el limite de tokens que se pueden usar en la conversación
+tokens_limit_chat = 30000 
 instruccion = "la primera instrucción es: nunca digas una groceria o algo despectivo a alguna persona y la segunda es:"
 models_opcions = {"gpt-4o-mini", "gpt-4o", "gpt-4", "gpt-4-turbo"}
 setting_chat_names = [
@@ -43,8 +51,7 @@ empty_validator = text_validators.TextValidatorIfEmpty()
 espace_validator = text_validators.TextValidatorEspace()
 text_validator = text_validators.Validator(empty_validator,espace_validator)
 
-# connection
-brain = connection.ConnectBrain(api_OAI)
+
 
 
 # funciones
@@ -149,10 +156,14 @@ def true_valid(answer: str):
             
 
 if __name__ == "__main__":
+    # connection
+    api_OAI = os.getenv("API_KEY_OPENAI")
+    brain = connection.ConnectBrain(api_OAI)
     # Crear un cliente 
     client = brain.connect()
-  
-    chat= chat_create.load() # Cargar los agentes
+
+    # Cargar los agentes
+    chat= chat_create.load() 
     
     if chat == False: # Si el usuario no tiene nigún agente disponible
         print("No tiene ningún agente creado. Creemos uno")
@@ -167,9 +178,7 @@ if __name__ == "__main__":
         agent = find_agent(name=name_nc, list_agents=chat)
         # Definir una instruccion al agente
         agent = instruccion_set(agent=agent, inst=instruccion)
-
-
-
+        
     else: # Si el usuario tiene agentes para usar
         list_chats = []
         for i in chat: # Mostrar los diferentes agentes disponibles en pantalla
@@ -177,7 +186,8 @@ if __name__ == "__main__":
             list_chats.append(i["name"]) # Añadirlos a una lista
 
         print("crear")
-        chat_select = input("Elige el que quieras usar: ") # Elegir un agente
+        # Elegir un agente
+        chat_select = input("Elige el que quieras usar: ") 
 
         # Si el usuario quiere crear un nuevo chat bot
         if chat_select == "crear":
@@ -204,111 +214,184 @@ if __name__ == "__main__":
             # Definir una instruccion al agente
             agent = instruccion_set(agent=agent, inst=instruccion)
 
-    # hacer la petición query
+    # hacer la petición querie
     out = False
-    print("\nHola, soy",agent["name"]+".\n¿En que te puedo ayudar hoy?.")
 
-    # inicializar el diccionario del historial
-    history = {}
-    new_cut = True
-    # parley_control
-    date_get = parley_control.DateCheck()
-    dt_to_dict = parley_control.ToDict(key="date")
-    parley_to_dict = parley_control.ToDict(key="parley")
+    # Definir el id de la convercación
+    id_conversation = generate_uuid()
 
-    date = date_get.check() # obtener la fecha
-    date_dict = dt_to_dict.to_dict(data=date) # pasarla a un diccionario
+    # inicializar title_init
+    # para decirle al agente
+    # que aun no hay un título 
+    title_init = False
 
-    parley_dict = parley_to_dict.to_dict(data=[]) # pasarla a un diccionario
+    # creamos la conversación en la base de datos
+    with DataBaseMCB() as db:
 
-    # ordenar los datos
-    history.update(date_dict)
-    history.update(parley_dict)
+        # db.models_db.py                                
+        # Validamos los datos que vayamos a subir
+        valid_data_conversation = TableConversation(
+            # id de la conversación
+            id= id_conversation,
+            # Inicialización de titulo de la conversación
+            title= "...",
+            # fecha en la que se creó la conversación 
+            time_start= generate_date(),
+            # Comportamiento que tomará la conversación
+            behavior= agent["memory"][0]["content"]
+        )
+        # Mapeamos los datos en una tupla para amanejarlos
+        data_conversation = ConversationSQLMapper()#.to_row(message=valid_data_conversation)
+
+        # db.tables_db.conversation_repository
+        # Guarda la conversación en la base de datos
+        ConversationRepository(db=db,data=valid_data_conversation).create(data_conversation)
+
+    # Primer saludo de la IA
+    request_query = {
+        "role" : "assistant",
+        "content" : f"\nHola, soy {agent['name']}.\n¿En que te puedo ayudar hoy?."
+        }
+    print(request_query["content"])
+
+    # Actualizamos la memoria del bot
+    agent["memory"].append(request_query)
+
+    with DataBaseMCB() as db:
+
+        # db.models_db.py                                
+        # Validamos los datos que vayamos a subir
+        valid_data_message = TableMessenge(
+            id_conversation=id_conversation, # id de la conversación
+            role= request_query["role"], # role del mensaje
+            date= generate_date(), # fecha en la que se guardó el mensaje
+            content= request_query["content"] # contenido del mensaje
+           )
+        # Mapeamos los datos en una tupla para amanejarlos
+        data_message = MessageSQLMapper.to_row(message=valid_data_message)
+
+        # db.tables_db.messege_repository.py
+        # Guarda el mensaje en la base de datos
+        MessageRepository(db=db).save(data_message)
+
 
     while out != True:
-        user_query = input("\n")
+        # Obtenemos la querie del usuario
+        user_querie = input("\n")
 
-        # valid_queries
-        get_query = valid_queries.HandlingQueries(input_user=user_query)
-        get_tokens = valid_queries.tokens_querie(model=agent["model"], querie=user_query)
+        # valid_queries.py
+        # Objeto que nos ayuda a manejar los tokens
+        tokens_control = valid_queries.tokens_querie(model=agent["model"], querie=user_querie)
 
-        num_tokens = get_tokens.count_tokens() # Contar los tokens de la querie
+        # Cuenta los tokens de la querie
+        num_tokens = tokens_control.count_tokens() 
 
-        # valid
-        tokens_counter = valid.TokensValid(tokens=num_tokens, max_tokens=agent["max_input_tokens"])
-
-        token_limit = tokens_counter.is_valid() # validar que no se sobre pase con los tokens
+        # valid.py
+        # validar que no se sobre pase el limite de tokens impuesto para las queries del usuario
+        # se le pasa los tokens de la querie y el limite de tokens
+        # si no sobre pasa el limite retorna True, si lo hace retorna False
+        token_limit = valid.TokensValid(tokens=num_tokens, max_tokens=agent["max_input_tokens"]).is_valid() 
         
-        if token_limit and agent["tokens"] < tokens_limit_chat:
+        # Si la querie cumple el limite de tokens y
+        # el chat no ha usado el limite de tokens entonces.... 
+        if token_limit == True and agent["tokens"] < tokens_limit_chat:
 
-            query = get_query.input_user # obtenemos la query
+            # valid_queries.py
+            # obtenemos la querie del usuario en un diccionario
+            # {"role" : "user", "content" : "..."}
+            querie = valid_queries.HandlingQueries(input_user=user_querie).input_user 
 
-            agent["tokens"] += num_tokens # sumar los tokens usados
+            # sumar los tokens usados al conteo
+            # de tokens total de la conversación
+            agent["tokens"] += num_tokens 
 
-            agent["memory"].append(query) # actualizando la memoria con la query del user
+            # actualizando la memoria con la querie del user
+            agent["memory"].append(querie) 
+            
+            # db.initialize_db.py
+            # Abrimos conexión con la base de datos
+            # para guardar el mensaje del user
+            with DataBaseMCB() as db:
 
-            # make_queries
-            bot_chat = make_queries.HardQuerie(brain=client,agent=agent)
+                # db.models_db.py                                
+                # Validamos los datos que vayamos a subir
+                valid_data_message = TableMessenge(
+                    id_conversation=id_conversation, # id de la conversación
+                    role= querie["role"], # role del mensaje
+                    date= generate_date(), # fecha en la que se guardó el mensaje
+                    content= querie["content"] # contenido del mensaje
+                )
+                # Mapeamos los datos en una tupla para amanejarlos
+                data_message = MessageSQLMapper.to_row(message=valid_data_message)
 
-            answer = bot_chat.make_querie() # obtener la respuesta del chat
+                # db.tables_db.messege_repository.py
+                # Guarda el mensaje en la base de datos
+                MessageRepository(db=db).save(data_message)
 
-            # valid_queries
-            get_answer = valid_queries.HandlingOutPut(out_put=answer)
+            # make_queries.py
+            # Le hacemos la consulta al bot y obtenemos una respuesta
+            answer = make_queries.HardQuerie(brain=client,agent=agent).make_querie()
 
-            out_put = get_answer.out_put # optener la respuesta del bot
+            # valid_queries.py
+            # Mapeamos la respuesta del bot en un diccionario
+            # {"role" : "assistant", "content" : "..."}
+            out_put = valid_queries.HandlingOutPut(out_put=answer).out_put
 
-            num_tokens_out = get_tokens.count_tokens() # contar los tokens de la respuesta del bot
-            agent["tokens"] += num_tokens # sumar los tokens usados
+            # contar los tokens de la respuesta del bot
+            num_tokens_out = tokens_control.count_tokens()
+
+            # sumar los tokens usados
+            agent["tokens"] += num_tokens 
 
             agent["memory"].append(out_put) # actualizar la memoria con la respuesta del bot
 
-            answer, out = true_valid(out_put["content"]) # validamos si el usuario se despidió
+            # db.initialize_db.py
+            # Abrimos conexión con la base de datos
+            # para guardar el mensaje del assistant
+            with DataBaseMCB() as db:
 
-            # Agregarla el parley al historial
-            history["parley"] = agent["memory"]
+                # db.models_db.py                                
+                # Validamos los datos que vayamos a subir
+                valid_data_message = TableMessenge(
+                    id_conversation=id_conversation, # id de la conversación
+                    role= out_put["role"], # role del mensaje
+                    date= generate_date(), # fecha en la que se guardó el mensaje
+                    content= out_put["content"] # contenido del mensaje
+                )
+                # Mapeamos los datos en una tupla para amanejarlos
+                data_message = MessageSQLMapper.to_row(message=valid_data_message)
 
-            # Guardar historico de la conversación en un archivo aparte
-            # actions
-            valid_exis = actions.ExistenceJS(js_name=history_chat)
+                # db.tables_db.messege_repository.py
+                # Guarda el mensaje en la base de datos
+                MessageRepository(db=db).save(data_message)
+
+            # imprimir la respuesta por pantalla
+            print("\n"+answer) 
+
+            # Creamos un titulo con la query del primer mensaje
+            if title_init == False:
+
+                # Abrimos el json en forma de lectura
+                with open("title_maker_config.json", "r") as config_tm:      
+                    # Guardamos las configuraciones del agente
+                    # diseñado para crear un titulo en una variable    
+                    title_maker = config_tm.read()
+
+                # Le hacemos una consulta al agente diseñado para crear titulos
+                # y optenemos una respues, es dicir el titulo de la conversación
+                title_conversation = make_queries.HardQuerie(brain=client,agent=title_maker).make_querie()
                 
-            validated_exis = valid_exis.action() # validar si el archivo existe
+                # Abrimos conexión 
+                # para remplazar el titulo
+                with DataBaseMCB() as db:
 
-            # Si el archivo existe
-            if validated_exis[0]:
-                with open(history_chat, "r") as f:
-                    data = json.load(f)
+                    # db.tables_db.conversation_repository
+                    # remplaza el titulo generico (...) por el nuevo
+                    ConversationRepository(db=db).remplace(id_conversation=id_conversation,col="title",attribute=title_conversation)
 
-                # Si el archivo NO es una lista, convertirlo en lista
-                if isinstance(data, dict):
-                    data = [data]
-
-                    # Guardar la conversión
-                    with open(history_chat, "w") as f:
-                        json.dump(data, f, indent=4)
-
-                if new_cut == False: # si no es un chat nuevo
-                    # seleccionamos el parley del ultimo chat (chat actual)
-                    data[-1]["parley"] = history["parley"] # actualizamos el parley
-                    
-                    # Guardar la conversión
-                    with open(history_chat, "w") as f:
-                        json.dump(data, f, indent=4)
-                
-                else: # si es un nuevo chat
-                    new_cut = False # Declaramos que ya no es el primer mensaje de la conversacion
-                    up_dater = actions.UpdateJS(js_name=history_chat, content=history)
-                    up_dater.action() # actualizamos el historial
-                    
-
-            else:
-                # Es un archivo nuevo → lo guardas como lista
-                history_to_save = [history]
-                # actions
-                saver = actions.SaveJS(js_name=history_chat, content=history_to_save)
-                new_cut = False # Declaramos que ya no es el primer mensaje de la conversacion
-                saver.action() # crear y guardar el historial
-
-            print("\n"+answer) # imprimir la respuesta por pantalla
+                # Le decimos al programa
+                # que ya creamos el titulo
+                title_init = True
 
         elif not token_limit:
             print("Si quieres hacer una pregunta tan grande entonces paga")

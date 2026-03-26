@@ -1,5 +1,6 @@
 from db.sql_language import InsertSQL, SelectMessagesByConversation
 from db.models_db import MessageSQLMapper
+from psycopg2 import Error as psycopg2Error
 
 
 # Manejará las principales funciones de la tabla message
@@ -9,7 +10,7 @@ class MessageRepository:
     # de la base de datos
     def __init__(self, db):
         self.db = db
-
+ 
     # Crea una fila en message
     def save(self, message: MessageSQLMapper):
         # Usa InsertSQL para crea una consulta sql
@@ -21,9 +22,14 @@ class MessageRepository:
             message.COLUMNS
         ).build()
 
-        # Hace la consulta sql
-        # message.to_row() = datos del mensaje
-        self.db.cur.execute(sql, message.to_row())
+        try:
+            # Hace la consulta sql
+            # message.to_row() = datos del mensaje
+            self.db.cur.execute(sql, message.to_row())
+
+        except Exception as e:
+            self.db.conn.rollback()
+            print("Error:", e)
 
     # Obtener los mensaje de una conversación
     # tenemos que pasarle el id de alguna conversación

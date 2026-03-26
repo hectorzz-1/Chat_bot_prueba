@@ -45,4 +45,6 @@ class DataBaseMCB:
 
 
 if __name__ == "__main__":
-    pass
+
+    with DataBaseMCB() as db:
+        print("hola")
