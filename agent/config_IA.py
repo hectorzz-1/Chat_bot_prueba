@@ -3,6 +3,7 @@
 # Librerias
 import json, os
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 # Clase hija de los parametros de configuración
 class Setter(ABC):
@@ -88,31 +89,44 @@ class InstructionSetter:
         return agent
 
 
-
 # Clase hija de ISettingsRepository
 # Tiene 2 funciones load y save
 # La utilidad es guardar y cargar archivos
 class JsonSettingsRepository(ISettingsRepository):
-    def __init__(self, file: str):
+    def __init__(self, file: Path):
         self.file = file
-
+        
     # Carga archivos y 
-    # si no exiten retorna False
+    # si no exiten retorna un error
     # se pudo cargar normal retorna el json
     def load(self) -> dict:
-        if os.path.exists(self.file):
+        try:
             with open(self.file, "r") as f:
-                try:
-                    return json.load(f)
-                except json.JSONDecodeError:
-                    return False
-        return False
+                # Retornamos el contenido del json 
+                return json.load(f)
+            
+        # Si el json no existe
+        except FileNotFoundError:
+            raise FileNotFoundError(f"{self.file} does not exist")
+        # Si el json no es valido
+        except json.JSONDecodeError:
+            raise ValueError(f"{self.file} is not valid JSON")
+        
     
     # Guarda actualiza los datos de un archivo
     # se le tiene que pasar el argumento data(Los datos a actualizar)
-    def save(self, data: list):
-        with open(self.file, "w") as f:
-            json.dump(data, f, indent=4)
+    def save(self, data: list[dict]):
+        try: 
+            with open(self.file, "w") as f:
+                # Actualizamos el json
+                json.dump(data, f, indent=4)
+
+        # Si el json no existe
+        except FileNotFoundError:
+            raise FileNotFoundError(f"{self.file} does not exist")
+        # Si el json no es valido
+        except json.JSONDecodeError:
+            raise ValueError(f"{self.file} is not valid JSON")
 
 
 class SaveSettingChat:

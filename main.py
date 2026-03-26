@@ -1,10 +1,10 @@
-import config_IA
-import initialize
+import agent.config_IA as config_IA
+import config.json_init as json_init
 import text_validators
 import valid
 import valid_queries
 import make_queries
-import connection
+import agent.connection as connection
 import actions
 
 # base de datos
@@ -35,7 +35,7 @@ setting_chat_names = [
     ]
 
 # initialize
-config = initialize.JsonInitConfig(file=config_name)
+config = json_init.JsonInitConfig(file=config_name)
     
 # config_IA
 chat_create = config_IA.JsonSettingsRepository(config_name)
