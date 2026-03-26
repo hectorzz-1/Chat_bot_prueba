@@ -1,16 +1,17 @@
 # Imports librerias externas
-import os
-import json
 from dotenv import load_dotenv
-from pathlib import Path
 
 # Imports librerias internas
 # Agente de IA agent/
 from agent.connection import ConnectBrain
-from agent.config_IA import JsonSettingsRepository
+from agent.config_IA import (
+    LoadSettingsAgent, SaveSettingsAgent, UpDateSettingDict,
+    )
+from agent.agent_setter import NameSetter, BehaviorSetter
 
 # Configuraciones Config/
 from config.config import BASE_DIR
+from config.json_init import JsonAddConfig
 
 if __name__ == "__main__":
 
@@ -22,6 +23,33 @@ if __name__ == "__main__":
 
     # Cargar los agentes
     JSON_CONFIG= BASE_DIR / "config" / "agents.json"
-    chat_config= JsonSettingsRepository(file=JSON_CONFIG).load()
+    chat_config= LoadSettingsAgent(file=JSON_CONFIG).load()
+
+    # Si el usuario no tiene nigún agente disponible
+    if not chat_config: 
+        print("No tiene ningún agente creado. Creemos uno")
+        # Inicializamos un nuevo agente
+        agent_using = JsonAddConfig(file=JSON_CONFIG).Add_config()
+
+        # Le damos un nombre
+        name_agent = input("Nombre: ")
+        # Lo guardamos en un diccionario
+        name_agent = NameSetter().set(data=name_agent)
+        # Lo actualizamos en el diccionario
+        # agent_using es una [{}] ponemos agent_using[0]
+        # para que agent_using sea solo un {}
+        agent_using = UpDateSettingDict(config_agent=agent_using[0], attribute=name_agent).update()
+
+        # Le damos un comportamiento
+        behavior_agent = input("Dale un comportamiento: ")
+        # Lo guardamos en un diccionario
+        behavior_agent = BehaviorSetter().set(data=behavior_agent)
+        # Lo actualizamos en el diccionario
+        agent_using = UpDateSettingDict(config_agent=agent_using, attribute=behavior_agent).update()
+
+        # Ahora volvemos a cargar el json
+        agents_container = LoadSettingsAgent(file=JSON_CONFIG).load()
+        # Actualizamos en el json
+        SaveSettingsAgent(file=JSON_CONFIG, config_list=agents_container, agent_update= agent_using).save()
 
     

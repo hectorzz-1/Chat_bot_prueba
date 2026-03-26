@@ -1,98 +1,11 @@
 # Estarán las clases con las que se configurará el chat y sus respuestas
 
 # Librerias
-import json, os
-from abc import ABC, abstractmethod
+import json
 from pathlib import Path
 
-# Clase hija de los parametros de configuración
-class Setter(ABC):
-    
-    @abstractmethod
-    def set(self, data) -> dict:
-        pass
-    
 
-# clase padre de la clase
-# JsonSettingsRepository
-class ISettingsRepository(ABC):
-    @abstractmethod
-    def load(self) -> dict:
-        pass
-
-    @abstractmethod
-    def save(self, data: dict):
-        pass
-
-
-# Obtener la temperatura
-class TemperaturaSetter(Setter):
-
-    def set(self,data: float):
-        return {"temperature" : data}
-    
-
-# Obtener la cantidad de tokens que se podrán usar
-class MaxTokensSetter(Setter):
-
-    def set(self,data : int):
-        return {"max_tokens" : data}
-    
-
-# Obtener la penalidad por repetir siempre el tema
-class PresencePenaltySetter(Setter):
-
-    def set(self,data : float):
-        return {"presence_penalty" : data}
-    
-
-# Obtener la penalidad por repetir palabras
-class FrequencyPenaltySetter(Setter):
-
-    def set(self,data : float):
-        return {"frequency_penalty" : data}
-    
-
-# Obtener la modelo de IA
-class ModelSetter(Setter):
-
-    def set(self,data : str):
-        return {"model" : data}
-    
-
-# Obtener el nombre
-class NameSetter(Setter):
-
-    def set(self,data : str):
-        return {"name" : data}
-    
-
-# colocar un comportamiento
-class BehaviorSetter(Setter):
-
-    def set(self,data : str):
-        return {"memory": [{
-            "role": "system",
-            "content": data
-        }]}
-    
-# Colocará una instruccion en el comportamiento del agente
-# esta siempre irá antes del comportamiento que el usuario
-# le haya dado.
-# entre la instruccion y el comportamiento habrá un ; para poder
-# manejar mejor cual es cual en un futuro.
-class InstructionSetter:
-
-    def set(self,agent: dict, inst : str = ""):
-        behavior = agent["memory"][0]["content"]
-        agent["memory"][0]["content"] = inst+ " ; "+behavior
-        return agent
-
-
-# Clase hija de ISettingsRepository
-# Tiene 2 funciones load y save
-# La utilidad es guardar y cargar archivos
-class JsonSettingsRepository(ISettingsRepository):
+class LoadSettingsAgent:
     def __init__(self, file: Path):
         self.file = file
         
@@ -107,20 +20,35 @@ class JsonSettingsRepository(ISettingsRepository):
             
         # Si el json no existe
         except FileNotFoundError:
-            raise FileNotFoundError(f"{self.file} does not exist")
+            return None
         # Si el json no es valido
         except json.JSONDecodeError:
-            raise ValueError(f"{self.file} is not valid JSON")
-        
+            return None
+
+
+# Actualiza las configuraciones y la guarda en el json
+class SaveSettingsAgent:
+    def __init__(self, file: Path, config_list: list[dict], agent_update: dict):
+        self.file = file
+        self.config_list = config_list
+        self.agent_update = agent_update
     
     # Guarda actualiza los datos de un archivo
     # se le tiene que pasar el argumento data(Los datos a actualizar)
-    def save(self, data: list[dict]):
-        try: 
+    def save(self):
+        try:
+            # Recorremos config_list hasta encontrar el indice del chat a actualizar
+            for indice, agent_config in enumerate(self.config_list):
+                if agent_config["id_chat"] == self.agent_update["id_chat"]:
+                    # Actualizamos las configuraciones del agente
+                    self.config_list[indice] = self.agent_update
+        except KeyError:
+            raise KeyError("key does not exist in dict. You most put a valid key")
+
+        try:
             with open(self.file, "w") as f:
                 # Actualizamos el json
-                json.dump(data, f, indent=4)
-
+                json.dump(self.config_list, f, indent=4)
         # Si el json no existe
         except FileNotFoundError:
             raise FileNotFoundError(f"{self.file} does not exist")
@@ -129,49 +57,85 @@ class JsonSettingsRepository(ISettingsRepository):
             raise ValueError(f"{self.file} is not valid JSON")
 
 
-class SaveSettingChat:
-    def __init__(self, repository: ISettingsRepository, chat: str):
-        self.repository = repository
-        self.chat = chat
-        self.settings = {}
+# pide un diccionario y el atributo a cambiar.
+# Lo que hace es que Actualiza el diccionario con el id dicho 
+# y retorna el diccionario actualizado
+class UpDateSettingDict:
+    def __init__(self, config_agent: dict, attribute: dict):
+        self.config_agent = config_agent
+        if len(attribute) != 1:
+            raise ValueError(f"atributte is not valid. You can only put dict with a single key.")
+        self.attribute = attribute
 
-    # 
-    def add(self, setter: Setter, value):
-        self.settings.update(setter.set(value))
+    def update(self):
+        try:
+            # Actualiza el diccionario
+            self.config_agent.update(self.attribute)
+        except KeyError:
+            raise KeyError("key does not exist in dict. You most put a valid key")
 
-    # Retorna las configuraciones
-    def get_settings(self):
-        return self.settings
-
-    # Esta funcion guarda las configuraciones
-    # si el file no existia o estaba vacio retorna False
-    def save(self):
-        data = self.repository.load()
-        if data == False:
-            return False
-
-        # Buscar el índice del chat en la lista
-        for i, chat in enumerate(data):
-            if chat.get("name") == self.chat:
-                data[i].update(self.settings)
-                break
-
-        # Guardar la lista completa
-        self.repository.save(data)
-        return True
-
+        # pasar el diccionario actualizada
+        return self.config_agent
 
 
 if __name__ == "__main__":
-    
-    name = "new chat"
-    jsr = JsonSettingsRepository("config.json")
-    ffj = SaveSettingChat(jsr, name)
 
-    setter = BehaviorSetter()
-    setter_dos = FrequencyPenaltySetter()
-    name = NameSetter()
+    list_c = [
+  {
+    "id_chat": "b15b4846-7c6d-41ed-80c8-01a47370f1a3",
+    "temperature": 1.0,
+    "max_tokens": 350,
+    "max_input_tokens": 400,
+    "presence_penalty": 0.4,
+    "frequency_penalty": 0.4,
+    "model": "gpt-4o-mini",
+    "tokens": 0,
+    "name": "new chat",
+    "memory": [
+      {
+        "role": "system",
+        "content": "Un asistente amigable que busca ayudar al resto"
+      }
+    ]
+  },
+  {
+    "id_chat": "cca168f0-8fd8-40e8-8683-7f8cb06219a1",
+    "temperature": 1.0,
+    "max_tokens": 350,
+    "max_input_tokens": 400,
+    "presence_penalty": 0.4,
+    "frequency_penalty": 0.4,
+    "model": "gpt-4o-mini",
+    "tokens": 0,
+    "name": "dggddg",
+    "memory": [
+      {
+        "role": "system",
+        "content": "Un asistente amigable que busca ayudar al resto"
+      }
+    ]
+  }
+]
+    dict_update= {
+    "id_chat": "cca168f0-8fd8-40e8-8683-7f8cb06219a1",
+    "temperature": 1.0,
+    "max_tokens": 350,
+    "max_input_tokens": 400,
+    "presence_penalty": 0.4,
+    "frequency_penalty": 0.4,
+    "model": "gpt-4o-mini",
+    "tokens": 0,
+    "name": "dggddg",
+    "memory": [
+      {
+        "role": "system",
+        "content": "Un asistente amigable que busca ayudar al resto"
+      }
+    ]
+  }
+    file_path = "/home/hector/Escritorio/proyectos/IA/pruebas/mini_chat_bot/config/agents.json"
 
-    ffj.add(setter=name,value="hola")
+    d = UpDateSettingDict(config_agent=dict_update, attribute={"name": "Eduardo"}).update()
+    a = SaveSettingsAgent(file=file_path,config_list=list_c,agent_update=d).save()
 
-    print(ffj.save())
+    print("d:", d)

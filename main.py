@@ -33,7 +33,7 @@ setting_chat_names = [
     "temperatura", "token maximos", "presence_penalty",
     "frequency_penalty", 
     ]
-
+ 
 # initialize
 config = json_init.JsonInitConfig(file=config_name)
     

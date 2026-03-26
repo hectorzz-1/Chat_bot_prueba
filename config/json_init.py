@@ -2,8 +2,9 @@
 import json
 from pathlib import Path
 from dataclasses import dataclass, fields, field
+from uuid import uuid4, UUID
 
-from config import BASE_DIR
+from config.config import BASE_DIR
 
 # Clase base
 class JsonTools:
@@ -44,6 +45,7 @@ class JsonTools:
 class JsonAddConfig(JsonTools):
     file: Path = field(metadata={"exclude": True})
 
+    id_chat: str = str(uuid4())
     temperature: float = 1.0
     max_tokens: int = 350
     max_input_tokens: int = 400
@@ -52,8 +54,8 @@ class JsonAddConfig(JsonTools):
     model: str = "gpt-4o-mini"
     tokens: int = 0
     name: str = "new chat"
-    role: str = "system"
-    content: str = "Un asistente amigable que busca ayudar al resto"
+    role: str = field(default="system",metadata={"exclude": True})
+    content: str = field(default="Un asistente amigable que busca ayudar al resto",metadata={"exclude": True})
     
 
     # Hacemos la estructura
@@ -70,6 +72,7 @@ class JsonAddConfig(JsonTools):
             }]
         }
 
+    # Retorna el diccionario que fue añadido
     def Add_config(self):
         # Inicializa un JSON con las configuraciones
         data = self.load_json(self.file)
@@ -82,7 +85,7 @@ class JsonAddConfig(JsonTools):
             # Añadimos el json
             with open(self.file, "w") as json_file:
                 json.dump(structure, json_file, indent=4)
-                return True
+                return structure
 
         # Si no está vacio
         # Añadimos un {} con las configuraciones a la []
@@ -95,7 +98,7 @@ class JsonAddConfig(JsonTools):
             # Lo añadimos al json
             with open(self.file, "w") as json_file:
                 json.dump(data, json_file, indent=4)
-                return True
+                return structure
 
 
 if __name__ == "__main__":
