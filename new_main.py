@@ -8,10 +8,25 @@ from agent.config_IA import (
     LoadSettingsAgent, SaveSettingsAgent, UpDateSettingDict,
     )
 from agent.agent_setter import NameSetter, BehaviorSetter
+from agent.query_executor import QueryExecutor
 
 # Configuraciones Config/
 from config.config import BASE_DIR
 from config.json_init import JsonAddConfig
+
+# Base de datos db/
+from db.initialize_db import DataBaseMCB
+from db.tables_db.message_repository import MessageRepository
+from db.tables_db.conversation_repository import ConversationRepository
+from db.models_db import (MessageSQLMapper, TableMessenge,
+                          TableConversation, ConversationSQLMapper)
+from db.get_data import generate_uuid, generate_date
+
+# Servicios services/
+from services.tokens_service import TokensQuery
+from services.message_service import HandlingQuery, HandlingOutPut
+
+tokens_limit_chat = 3000
 
 if __name__ == "__main__":
 
@@ -65,7 +80,7 @@ if __name__ == "__main__":
         print("create")
 
         # Seleccionar un agente
-        agent_name = input("Choose the one you want to use: ") 
+        agent_name = input("Choose one you want to use: ") 
 
         # Si el usuario quiere crear un nuevo chat bot
         if agent_name == "create":
@@ -105,5 +120,135 @@ if __name__ == "__main__":
             agent_using = next(
                 (agent for agent in chat_config if agent["id_chat"] == agent_id)
             )
+
+    # creamos la conversación en la base de datos
+    with DataBaseMCB() as db:
+        # Definir el id de la convercación
+        id_conversation = generate_uuid()
+                              
+        # Validamos los datos que vayamos a subir
+        valid_data_conversation = TableConversation(
+            # id de la conversación
+            id= id_conversation,
+            # Inicialización de titulo de la conversación
+            title= "...",
+            # fecha en la que se creó la conversación 
+            time_start= generate_date(),
+            # Comportamiento que tomará la conversación
+            behavior= agent_using["memory"][0]["content"]
+        )
+        # Instanseamos el mapeador
+        mapper_conversation = ConversationSQLMapper()
+
+        # db.tables_db.conversation_repository
+        # Guarda la conversación en la base de datos
+        ConversationRepository(db=db,data=valid_data_conversation).create(mapper_conversation)
+
+    # Primer saludo de la IA
+    request_query = {
+        "role" : "assistant",
+        "content" : f"\nHola, soy {agent_using['name']}.\n¿En que te puedo ayudar hoy?."
+        }
+    print(request_query["content"])
+
+    # Actualizamos la memoria del bot
+    agent_using["memory"].append(request_query)
+
+    # guardamos el mensaje en la base de datos
+    with DataBaseMCB() as db:
+        # Validamos los datos que vayamos a subir
+        valid_data_message = TableMessenge(
+            id_conversation=id_conversation, # id de la conversación
+            role= request_query["role"], # role del mensaje
+            date= generate_date(), # fecha en la que se guardó el mensaje
+            content= request_query["content"] # contenido del mensaje
+           )
+        # instanceamos el mapper
+        mapper_message = MessageSQLMapper()
+
+        # Guarda el mensaje en la base de datos
+        MessageRepository(db=db, data=valid_data_message).save(mapper_message)
+
+    while True:
+        # Obtenemos la query del usuario
+        user_query = input("\n")
+
+        # Objeto que nos ayuda a manejar los tokens
+        tokens_control = TokensQuery(model=agent_using["model"], query=user_query)
+
+        # Cuenta los tokens de la query
+        num_tokens_query = tokens_control.count_tokens() 
+
+        # validar que no se sobre pase el limite de tokens impuesto para las query del usuario
+        # se le pasa los tokens de la query y el limite de tokens
+        # si no sobre pasa el limite retorna True, si lo hace retorna False
+        token_limit = num_tokens_query <= agent_using["max_input_tokens"]
+        
+        # Si la query cumple el limite de tokens y
+        # el chat no ha usado el limite de tokens entonces.... 
+        if token_limit == True and agent_using["tokens"] < tokens_limit_chat:
+
+            # formateamos el mensaje
+            # {"role" : "user", "content" : "..."}
+            user_query = HandlingQuery(input_user=user_query).query
+
+            # sumar los tokens usados al conteo
+            # de tokens total de la conversación
+            agent_using["tokens"] += num_tokens_query 
+
+            # actualizando la memoria con la query del user
+            agent_using["memory"].append(user_query) 
+            
+
+            # Abrimos conexión con la base de datos
+            # para guardar el mensaje del user
+            with DataBaseMCB() as db:
+                          
+                # Validamos los datos que vayamos a subir
+                valid_data_message = TableMessenge(
+                    id_conversation=id_conversation, # id de la conversación
+                    role= user_query["role"], # role del mensaje
+                    date= generate_date(), # fecha en la que se guardó el mensaje
+                    content= user_query["content"] # contenido del mensaje
+                )
+
+                # db.tables_db.messege_repository.py
+                # Guarda el mensaje en la base de datos
+                MessageRepository(db=db, data= valid_data_message).save(mapper_message)
+
+            # Le hacemos la consulta al bot y obtenemos una respuesta
+            answer = QueryExecutor(brain=brain,agent=agent_using).make_query()
+
+            # formateamos el mensaje
+            # {"role" : "assistant", "content" : "..."}
+            out_put = HandlingOutPut(out_put=answer).out_put
+
+            # contar los tokens de la respuesta del bot
+            num_tokens_out = tokens_control.count_tokens()
+
+            # sumar los tokens usados
+            agent_using["tokens"] += num_tokens_out 
+            # actualizar la memoria con la respuesta del bot
+            agent_using["memory"].append(out_put) 
+
+            # Abrimos conexión con la base de datos
+            # para guardar el mensaje del assistant
+            with DataBaseMCB() as db:            
+                # Validamos los datos que vayamos a subir
+                valid_data_message = TableMessenge(
+                    id_conversation=id_conversation, # id de la conversación
+                    role= out_put["role"], # role del mensaje
+                    date= generate_date(), # fecha en la que se guardó el mensaje
+                    content= out_put["content"] # contenido del mensaje
+                )
+
+                # Guarda el mensaje en la base de datos
+                MessageRepository(db=db, data=valid_data_message).save(mapper_message)
+
+            # imprimir la respuesta por pantalla
+            print("\n"+answer)
+
+        if user_query["content"].lower() == "chao":
+            break
 
     

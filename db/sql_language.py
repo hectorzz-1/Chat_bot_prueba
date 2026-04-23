@@ -7,7 +7,7 @@ class InsertSQL:
     def __init__(self, table: str, columns: tuple): 
         self.table = table # Nombre de la tabla a la cúal insertar
         self.columns = columns # una tupla o lista de los datos que quiere insertar
-
+ 
     # Retorna una consulta de SQL para hacer un insert
     #     Ej: INSERT INTO conversation ('id*', 'tile', 'time_start')
     #     VALUES (%s, %s, %s)

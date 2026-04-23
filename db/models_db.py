@@ -43,7 +43,7 @@ class TableMessenge:
             raise ValueError("content cannot be empty")
         
         # Id de la conversacion a la cual pertenece el mensaje
-        self.id_conversation = id_conversation # UUID
+        self.id_conversation = str(id_conversation) # UUID
         # Rol de quien emite el mensaje
         self.role = role # user, assistant o system
         # Hora en la que se envió el mensaje

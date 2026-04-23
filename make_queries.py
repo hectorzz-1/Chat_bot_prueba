@@ -5,14 +5,14 @@ from openai import OpenAI
 
 
 
-class Querie(ABC):
+class Query(ABC):
 
     @abstractmethod
     def make_querie(self) -> dict:
         pass
 
 
-class BasicQuierie(Querie):
+class BasicQuierie(Query):
 
     def __init__(self,api, history:list, model:str):
         self.api = api
@@ -31,7 +31,7 @@ class BasicQuierie(Querie):
             return f"Error: {str(e)}"
         
 
-class MediunQuerie(Querie):
+class MediunQuerie(Query):
     
     def __init__(self,api, config:dict):
         self.api = api
@@ -53,13 +53,13 @@ class MediunQuerie(Querie):
             return f"Error: {str(e)}"
         
 
-class HardQuerie(Querie):
+class QueryExecutor:
 
     def __init__(self,brain : str, agent:dict):
         self.brain = brain
         self.agent = agent
     
-    def make_querie(self):
+    def make_query(self):
         try:
 
             response = self.brain.chat.completions.create(

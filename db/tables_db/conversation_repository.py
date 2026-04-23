@@ -20,15 +20,20 @@ class ConversationRepository:
         # Usa InsertSQL para crea una consulta sql
         # mas concretamente un insert. más o menos como este:
         #     INSERT INTO conversation (id*, tile, time_start, behavior)
-        #     VALUES (%s, %s, %s)
+        #     VALUES (%s, %s, %s, %s)
         sql = InsertSQL(
             table="conversations",
             columns=conversation.COLUMNS
         ).build()
 
-        # Hace la consulta sql
-        # conversation.to_row() = datos de la conversación
-        self.db.cur.execute(sql, conversation.to_row(self.data))
+        try:
+            # Hace la consulta sql
+            # conversation.to_row() = datos de la conversación
+            self.db.cur.execute(sql, conversation.to_row(self.data))
+        
+        except Exception as e:
+            self.db.conn.rollback()
+            print("Error:", e)
 
     # Obtener una conversación según su id
     # tenemos que pasarle el id de alguna conversación
