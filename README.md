@@ -1,209 +1,231 @@
-# 🤖 Sistema de Agentes IA Personalizados (CLI)
+# 🤖 Mini Chat Bot
 
-Este proyecto implementa un **sistema de agentes IA configurables** capaces de mantener memoria, realizar consultas a modelos OpenAI y conservar historiales de conversación.  
-Todo se ejecuta desde una **interfaz de línea de comandos (CLI)** y utiliza un conjunto modular de clases para validación, configuración, conexión y almacenamiento.
-
----
-
-## 🚀 Características principales
-
-### ✔ Crear agentes IA personalizados
-
-Puedes crear múltiples agentes, cada uno con:
-
-- Nombre
-- Comportamiento base (behavior)
-- Modelo de IA a usar
-- Instrucciones globales inmutables
-
-Los agentes se guardan en `config.json` y pueden reutilizarse en futuras sesiones.
+A modular conversational AI chatbot built in Python that connects to the OpenAI API, manages multiple agents with custom behaviors, and persists full conversation history in a PostgreSQL database.
 
 ---
 
-### ✔ Memoria persistente
+## 📋 Table of Contents
 
-Cada agente mantiene:
-
-- Tokens usados
-- Historial de mensajes (`memory`)
-- Comportamiento predefinido
-- Restricciones e instrucciones obligatorias
+- [Features](#-features)
+- [Project Structure](#-project-structure)
+- [Requirements](#-requirements)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [Usage](#-usage)
+- [Architecture](#-architecture)
+- [Token Management](#-token-management)
 
 ---
 
-### ✔ Historial estructurado de conversaciones
+## ✨ Features
 
-Las conversaciones se guardan en `history.json` como una lista de sesiones:
+- 🧠 **Multi-agent support** — create and manage multiple AI agents, each with its own name, behavior, and configuration.
+- 💬 **Persistent conversations** — every message and conversation is stored in a PostgreSQL database.
+- 🔢 **Token control** — tracks token usage per query and per conversation to avoid exceeding limits.
+- 🗂️ **JSON-based agent config** — agents are stored and loaded from a `agents.json` file for easy management.
+- 🏗️ **Clean layered architecture** — separated into agent, services, db, and config layers.
 
-```json
-[
-  {
-    "date": "2025-11-13 12:45",
-    "parley": [
-      { "role": "user", "content": "..." },
-      { "role": "assistant", "content": "..." }
-    ]
-  }
-]
+---
+
+## 📁 Project Structure
+
+```
+mini_chat_bot/
+├── main.py                  # Entry point
+├── actions.py               # High-level actions
+├── agent/
+│   ├── connection.py        # OpenAI client connection
+│   ├── config_IA.py         # Load, save and update agent settings
+│   ├── agent_setter.py      # Name and behavior setters
+│   └── query_executor.py    # Executes queries against the OpenAI API
+├── config/
+│   ├── config.py            # Base directory and global config
+│   ├── json_init.py         # JSON agent initialization
+│   └── agents.json          # Stored agent configurations
+├── db/
+│   ├── initialize_db.py     # Database connection context manager
+│   ├── models_db.py         # Pydantic models and SQL mappers
+│   ├── get_data.py          # UUID and date helpers
+│   ├── queries_db.py        # Raw query utilities
+│   ├── sql_language.py      # SQL helpers
+│   └── tables_db/
+│       ├── conversation_repository.py  # CRUD for conversations
+│       └── message_repository.py       # CRUD for messages
+└── services/
+    ├── tokens_service.py    # Token counting via tiktoken
+    └── message_service.py   # Query/output message formatting
 ```
 
-El sistema:
+---
 
-Corrige automáticamente archivos dañados.
+## ⚙️ Requirements
 
-Convierte dict → lista si el usuario borró accidentalmente el formato.
+- Python 3.10+
+- PostgreSQL
+- An OpenAI API key
 
-Actualiza el último chat o añade uno nuevo.
+**Python dependencies:**
 
-✔ Validación robusta
-Antes de procesar cualquier solicitud, se valida:
-
-Si el texto está vacío
-
-Si contiene espacios inválidos
-
-Si respeta el límite de tokens
-
-Si el modelo seleccionado es válido
-
-✔ Conexión modular con OpenAI
-Módulo connection.ConnectBrain:
-
-Crea el cliente OpenAI usando la clave API en .env
-
-Permite cambiar fácilmente el backend en el futuro
-
-✔ Instrucciones automáticas
-Todo agente recibe una instrucción fija inicial:
-
-“Nunca digas una grosería o algo despectivo a alguna persona…”
-
-Esto garantiza que el agente mantenga siempre la regla, aunque el usuario intente modificar su comportamiento.
-
-📁 Estructura del proyecto
-pgsql
-Copiar código
-
-```json
-├── main.py
-├── config.json
-├── history.json
-├── connection.py
-├── config_IA.py
-├── initialize.py
-├── actions.py
-├── valid.py
-├── valid_queries.py
-├── text_validators.py
-├── make_queries.py
-├── parley_control.py
-└── .env
+```
+openai
+tiktoken
+python-dotenv
+sqlalchemy
+psycopg2-binary
+pydantic
 ```
 
-⚙️ Flujo de ejecución del programa
-1️⃣ Inicialización
-El archivo main.py:
+Install them with:
 
-Cargue la API Key desde un .env
+```bash
+pip install -r requirements.txt
+```
 
-Carga o crea config.json mediante JsonInitConfig
+---
 
-Registra los módulos de configuración y validación
+## 🚀 Installation
 
-2️⃣ Selección de un agente
-Al iniciar:
+1. **Clone the repository:**
 
-Si no hay agentes → se crea uno nuevo
+```bash
+git clone https://github.com/your-user/mini_chat_bot.git
+cd mini_chat_bot
+```
 
-Si existen → se muestran y el usuario elige uno
+2. **Create a virtual environment:**
 
-También puede elegir crear uno nuevo
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+```
 
-Cada agente recibe la instrucción fija configurada.
+3. **Install dependencies:**
 
-3️⃣ Inicio de conversación
-El programa:
+```bash
+pip install -r requirements.txt
+```
 
-Muestra un saludo inicial
+4. **Set up the database:**
 
-Crea un registro de sesión con:
+```bash
+psql -U postgres -c "CREATE DATABASE mini_chat_bot_of;"
+psql -U postgres -d mini_chat_bot_of -c "CREATE USER ai_app WITH PASSWORD 'your_password';"
+psql -U postgres -d mini_chat_bot_of -c "GRANT ALL PRIVILEGES ON DATABASE mini_chat_bot_of TO ai_app;"
+```
 
-Fecha
+5. **Configure your `.env` file** (see [Configuration](#-configuration)).
 
-Lista vacía de mensajes (parley)
+6. **Initialize the database tables:**
 
-4️⃣ Ciclo de conversación
-Cada vuelta del loop hace:
+```bash
+python -c "from db.initialize_db import DataBaseMCB; DataBaseMCB().init()"
+```
 
-Recibir input del usuario
+---
 
-Validar texto
+## 🔧 Configuration
 
-Contar tokens
+Create a `.env` file in the root directory:
 
-Verificar límites
+```env
+API_KEY_OPENAI=your_openai_api_key_here
+DATABASE_URL=postgresql://ai_app:your_password@localhost/mini_chat_bot_of
+```
 
-Enviar la consulta a OpenAI
+---
 
-Recibir y procesar la respuesta
+## 💻 Usage
 
-Guardar ambos mensajes en agent["memory"]
+Run the chatbot from the terminal:
 
-Registrar la conversación en history.json
-
-5️⃣ Manejo del historial
-El historial está diseñado para ser siempre una lista de sesiones.
-
-El sistema:
-
-Detecta si el archivo existe
-
-Lo convierte en lista si está mal formado
-
-Si la conversación es nueva → se añade
-
-Si ya está en curso → actualiza el último elemento
-
-6️⃣ Límite de tokens
-Si el usuario supera los límites:
-
-Se termina la conversación
-
-El agente restablece su memoria a la instrucción inicial (ParleyForget)
-
-🔧 Requisitos
-Python 3.10+
-
-OpenAI Python SDK
-
-dotenv (python-dotenv)
-
-Instalar dependencias:
-
-bash
-Copiar código
-pip install openai python-dotenv
-🔑 Configurar la API Key
-En un archivo .env:
-
-ini
-Copiar código
-API_KEY_OPENAI=tu_api_key_aquí
-▶️ Ejecución
-bash
-Copiar código
+```bash
 python main.py
-📄 Licencia
-Este proyecto es de uso personal del desarrollador.
-Si deseas reutilizar partes del framework, asegúrate de revisar las dependencias y módulos personalizados.
+```
 
-🧩 Notas finales
-Este proyecto está construido con una arquitectura modular que permite:
+**First run — no agents created yet:**
 
-Sustituir modelos fácilmente
+```
+you doesn't have any agents created. Let's create one
+Give him a name: Aria
+Give him a behavior: You are a helpful and concise assistant.
+```
 
-Cambiar validadores
+**Subsequent runs — choose an existing agent:**
 
-Añadir nuevos tipos de acciones (guardar en DB, exportar PDF, etc.)
+```
+Aria
+create
+Choose one you want to use: Aria
 
-Integrarlo en interfaces gráficas en el futuro
+Hola, soy Aria.
+¿En que te puedo ayudar hoy?
+
+> What's the capital of France?
+Paris is the capital of France.
+```
+
+**Commands during chat:**
+
+| Input                         | Effect                      |
+| ----------------------------- | --------------------------- |
+| Any text                      | Send a message to the agent |
+| `create` (at agent selection) | Create a new agent          |
+
+The session ends automatically when the token limit is reached.
+
+---
+
+## 🏗️ Architecture
+
+The project follows a layered architecture where each layer has a single responsibility:
+
+```
+main.py
+   │
+   ├── agent/          → Connects to OpenAI, manages agent config, executes queries
+   │
+   ├── services/       → Formats messages, counts tokens
+   │
+   ├── db/             → Persists conversations and messages to PostgreSQL
+   │
+   └── config/         → Loads environment, manages agents.json
+```
+
+**Data flow per user message:**
+
+```
+user input
+    ↓
+TokensQuery         (count tokens, validate limit)
+    ↓
+HandlingQuery       (format to {"role": "user", "content": ...})
+    ↓
+MessageRepository   (save user message to DB)
+    ↓
+QueryExecutor       (send full memory to OpenAI API)
+    ↓
+HandlingOutPut      (format to {"role": "assistant", "content": ...})
+    ↓
+MessageRepository   (save assistant message to DB)
+    ↓
+print response
+```
+
+---
+
+## 🔢 Token Management
+
+The bot enforces two token limits:
+
+| Limit                      | Description                                  |
+| -------------------------- | -------------------------------------------- |
+| `max_input_tokens`         | Max tokens allowed per single user query     |
+| `tokens_limit_chat` (3000) | Max total tokens for the entire conversation |
+
+If either limit is exceeded, the session ends with a message and the loop breaks. This prevents runaway API costs.
+
+---
+
+## 📄 License
+
+MIT License. Feel free to use, modify, and distribute this project.
