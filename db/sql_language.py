@@ -21,9 +21,9 @@ class InsertSQL:
 # ordenados del más antiguo al más reciente
 class SelectMessagesByConversation:
     SQL = """
-    SELECT conversation_id, role, date, content
+    SELECT id_conversation, role, date, content
     FROM messages
-    WHERE conversation_id = %s
+    WHERE id_conversation = %s
     ORDER BY date ASC
     """
 
@@ -36,6 +36,11 @@ class SelectConversationByIdSQL:
     WHERE id = %s
     """
 
+class SelectConversationSQL:
+    SQL = """
+    SELECT id, title, time_start, behavior
+    FROM conversations
+    """
 
 class UpDateConversationsSQL:
 

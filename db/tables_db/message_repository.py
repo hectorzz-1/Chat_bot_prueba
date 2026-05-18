@@ -9,7 +9,7 @@ class MessageRepository:
     
     # Se le tendrá que pasar una conexion
     # de la base de datos
-    def __init__(self, db, data : TableMessenge):
+    def __init__(self, db, data : TableMessenge = None):
         self.db = db
         self.data = data
  
@@ -38,9 +38,9 @@ class MessageRepository:
     def get_by_conversation(self, conversation_id):
         # Obtenemos el sql
         # mas concretamente un SELECT como este:
-        #    SELECT conversation_id, role, date, content
+        #    SELECT id_conversation, role, date, content
         #    FROM messages
-        #    WHERE conversation_id = %s
+        #    WHERE id_conversation = %s
         #    ORDER BY date ASC
         sql = SelectMessagesByConversation().SQL
 

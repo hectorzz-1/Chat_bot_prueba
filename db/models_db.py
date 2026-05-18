@@ -17,9 +17,6 @@ class TableMessenge:
 
     def __init__(self, id_conversation:UUID, role:str, date:datetime, content:str):
 
-        # Valida que el id_conversation sea un UUID
-        if not isinstance(id_conversation, UUID):
-            raise TypeError("id_conversation must be a UUID")
         
         # Valida que role sea un str
         if not isinstance(role, str):
@@ -70,14 +67,15 @@ class MessageSQLMapper:
 
     # Se llama así TMessengeCompiler.from_row(row)
     # Retorna un objeto valido
-    @classmethod 
-    def from_row(cls, row): # cls es misma clase sobre la que se llamó el método 
+    @staticmethod 
+    def from_row( row) -> TableMessenge:
         # Se crea un objeto valido y lo retorna
-        return cls( id_conversation=row[0],
-                    role=row[1],
-                    date=row[2],
-                    content=row[3]
-                )
+        return TableMessenge (
+                id_conversation=row[0],
+                role=row[1],
+                date=row[2],
+                content=row[3]
+            )
     
 
 class TableConversation:
@@ -134,14 +132,15 @@ class ConversationSQLMapper:
     
     # Se llama así ConversationSQLMapper.from_row(row)
     # Retorna un objeto valido
-    @classmethod 
-    def from_row(cls, row): # cls es misma clase sobre la que se llamó el método 
+    @staticmethod
+    def from_row(row) -> TableConversation: 
         # Se crea un objeto valido y lo retorna
-        return cls( id=row[0],
-                    title=row[1],
-                    time_start=row[2],
-                    behavior=row[3]
-                )
+        return  TableConversation(
+            id=row[0],
+            title=row[1],
+            time_start=row[2],
+            behavior=row[3]
+        )
 
 
 if __name__ == "__main__":

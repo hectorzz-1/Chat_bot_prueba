@@ -1,9 +1,10 @@
 from db.sql_language import (
     InsertSQL,
     SelectConversationByIdSQL,
-    UpDateConversationsSQL
+    UpDateConversationsSQL,
+    SelectConversationSQL
 )
-from db.models_db import ConversationSQLMapper
+from db.models_db import ConversationSQLMapper, TableConversation
  
 
 # manejará las principales funciones de la tabla conversation
@@ -11,12 +12,12 @@ class ConversationRepository:
 
     # Se le tendrá que pasar una conexion
     # de la base de datos
-    def __init__(self, db, data):
+    def __init__(self, db, data : TableConversation = None):
         self.db = db
         self.data = data
  
     # Crea una fila en conversation
-    def create(self, conversation: ConversationSQLMapper):
+    def create(self, conversation: ConversationSQLMapper = None) -> None:
         # Usa InsertSQL para crea una consulta sql
         # mas concretamente un insert. más o menos como este:
         #     INSERT INTO conversation (id*, tile, time_start, behavior)
@@ -37,7 +38,7 @@ class ConversationRepository:
 
     # Obtener una conversación según su id
     # tenemos que pasarle el id de alguna conversación
-    def get_by_id(self, conversation_id):
+    def get_by_id(self, conversation_id) -> TableConversation | None:
         # Obtenemos el sql
         # mas concretamente un SELECT como este:
         #    SELECT id, title, time_start, behavior
@@ -55,7 +56,21 @@ class ConversationRepository:
         # Retorna un objeto que representa la conversacion
         return ConversationSQLMapper.from_row(row)
     
-    def remplace(self, conversation_id, col, attribute):
+    def get_conversations(self) -> list[tuple]:
+        # Obtenemos el sql
+        sql = SelectConversationSQL().SQL
+
+        # Hace la consulta sql
+        self.db.cur.execute(sql)
+
+        # Devuelve una list[tuple] con los datos
+        rows = self.db.cur.fetchall()
+        
+        # Devuelvo una lista con tuplas con los datos
+        return rows
+
+
+    def remplace(self, conversation_id, col, attribute) -> None:
         # Obtenemos el sql
         # mas concretamente un UPDATE como este:
         #   UPDATE conversations
