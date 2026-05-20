@@ -9,25 +9,24 @@ class MessageRepository:
     
     # Se le tendrá que pasar una conexion
     # de la base de datos
-    def __init__(self, db, data : TableMessenge = None):
+    def __init__(self, db,):
         self.db = db
-        self.data = data
  
     # Crea una fila en message
-    def save(self, message: MessageSQLMapper):
+    def save(self, data: TableMessenge):
         # Usa InsertSQL para crea una consulta sql
         # mas concretamente un insert. más o menos como este:
         #     INSERT INTO messages ('id_conversation', "role", "date", "content")
         #     VALUES (%s, %s, %s)
         sql = InsertSQL(
             "messages",
-            message.COLUMNS
+            MessageSQLMapper.COLUMNS
         ).build()
 
         try:
             # Hace la consulta sql
             # message.to_row() = datos del mensaje
-            self.db.cur.execute(sql, message.to_row(self.data))
+            self.db.cur.execute(sql, MessageSQLMapper.to_row(data))
 
         except Exception as e:
             self.db.conn.rollback()
@@ -35,7 +34,7 @@ class MessageRepository:
 
     # Obtener los mensaje de una conversación
     # tenemos que pasarle el id de alguna conversación
-    def get_by_conversation(self, conversation_id):
+    def get_by_conversation(self, conversation_id) -> list[TableMessenge]:
         # Obtenemos el sql
         # mas concretamente un SELECT como este:
         #    SELECT id_conversation, role, date, content

@@ -31,14 +31,14 @@ class SelectMessagesByConversation:
 # Obtiene una conversación concreta según su id
 class SelectConversationByIdSQL:
     SQL = """
-    SELECT id, title, time_start, behavior
+    SELECT id, title, time_start, id_agent, tokens
     FROM conversations
     WHERE id = %s
     """
 
 class SelectConversationSQL:
     SQL = """
-    SELECT id, title, time_start, behavior
+    SELECT id, title, time_start, id_agent, tokens
     FROM conversations
     """
 
@@ -62,8 +62,42 @@ class UpDateConversationsSQL:
     WHERE id = %s
     """
 
+class SelectAgentSQL:
+    SQL = """
+    SELECT id, name, model, behavior, temperature, presence_penalty,
+    frequency_penalty, max_tokens, max_input_tokens, created_at
+    FROM agent
+    """
+
+class SelectAgentByIdSQL:
+    SQL = """
+    SELECT id, name, model, behavior, temperature, presence_penalty,
+    frequency_penalty, max_tokens, max_input_tokens, created_at
+    FROM agent
+    WHERE id = %s
+    """
+
+class SelectByNameSQL:
+    SQL="""
+    SELECT id, name, model, behavior, temperature, presence_penalty,
+    frequency_penalty, max_tokens, max_input_tokens, created_at
+    FROM agent
+    WHERE name = %s
+    """
+
+class UpDateAgentSQL:
+
+    def __init__(self, column):
+        self.column = column
+
+    def build(self):
+        return f"""
+        UPDATE agent
+        SET {self.column} = %s
+        WHERE id = %s
+        """
 
 if __name__ == "__main__":
 
-    f = InsertSQL("messages", ("id_conversation", "role", "date", "content")).build()
+    f = InsertSQL("messages", ("id_conversation", "role", "date", "content", "agent")).build()
     print(f)

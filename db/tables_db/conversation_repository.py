@@ -12,25 +12,24 @@ class ConversationRepository:
 
     # Se le tendrá que pasar una conexion
     # de la base de datos
-    def __init__(self, db, data : TableConversation = None):
+    def __init__(self, db) -> None:
         self.db = db
-        self.data = data
  
     # Crea una fila en conversation
-    def create(self, conversation: ConversationSQLMapper = None) -> None:
+    def create(self, data: TableConversation) -> None:
         # Usa InsertSQL para crea una consulta sql
         # mas concretamente un insert. más o menos como este:
         #     INSERT INTO conversation (id*, tile, time_start, behavior)
         #     VALUES (%s, %s, %s, %s)
         sql = InsertSQL(
             table="conversations",
-            columns=conversation.COLUMNS
+            columns=ConversationSQLMapper.COLUMNS
         ).build()
 
         try:
             # Hace la consulta sql
             # conversation.to_row() = datos de la conversación
-            self.db.cur.execute(sql, conversation.to_row(self.data))
+            self.db.cur.execute(sql, ConversationSQLMapper.to_row(data))
         
         except Exception as e:
             self.db.conn.rollback()

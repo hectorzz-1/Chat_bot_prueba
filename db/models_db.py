@@ -16,7 +16,13 @@ class TableMessenge:
     VALID_ROLES = {"user", "assistant", "system"}
 
     def __init__(self, id_conversation:UUID, role:str, date:datetime, content:str):
-
+        
+        # Valida que el id sea UUID
+        try: 
+            if isinstance(UUID(id_conversation), UUID):
+                pass
+        except:
+            raise TypeError("id must be a UUID")
         
         # Valida que role sea un str
         if not isinstance(role, str):
@@ -80,10 +86,17 @@ class MessageSQLMapper:
 
 class TableConversation:
 
-    def __init__(self, id:UUID, title:str, time_start:datetime, behavior:str):
+    def __init__(
+            self,
+            id:UUID, title:str, time_start:datetime,
+            id_agent:UUID, tokens: int
+            ):
         
         # Valida que el id sea UUID
-        if not isinstance(id, UUID):
+        try: 
+            if isinstance(UUID(id), UUID):
+                pass
+        except:
             raise TypeError("id must be a UUID")
         
         # Valida que title sea un str
@@ -97,12 +110,19 @@ class TableConversation:
         if not isinstance(time_start, datetime):
             raise TypeError("'time start' must be datetime.datetime")
         
-        # Valida que behavior sea un str
-        if not isinstance(behavior, str):
-            raise TypeError("behavior must be a string")
-        # Valida que el behavior no esté vacío
-        if not behavior.strip():
-            raise ValueError("behavior cannot be empty")
+        # Valida que el id sea UUID
+        try: 
+            if isinstance(UUID(id), UUID):
+                pass
+        except:
+            raise TypeError("id must be a UUID")
+        
+        # Valida que tokens sea un int
+        if not isinstance(tokens, int):
+            raise TypeError("tokens must be a integer")
+        # Valida que el tokens no sea menor que 0
+        if tokens < 0:
+            raise TypeError("tokens cannot be less than 0")
 
         # Id de la conversación
         self.id = str(id) # type: UUID
@@ -110,24 +130,30 @@ class TableConversation:
         self.title = title # type: str
         # Hora en la que se creo la conversación
         self.time_start = time_start # type: datetime
-        # Comportamiento en la que se basa el agente para responder
-        self.behavior = behavior # type: str
+        # Agente a la cual está asociada la conversacion
+        self.id_agent = str(id_agent) # type: UUID
+        # Los tokens que uso la conversación
+        self.tokens = tokens # type: int
 
 
 class ConversationSQLMapper:
 
     # La columnas de la tabla
-    COLUMNS = ("id", "title", "time_start", "behavior")
+    COLUMNS = (
+        "id", "title", "time_start",
+        "id_agent", "tokens"
+        )
 
     # Se le tiene que pasar un objeto de tipo TableConversation
-    # y usara los datos para ordenar los datos en una tupla
+    # y usará los datos para ordenar los datos en una tupla
     @staticmethod
     def to_row(message: TableConversation):
         return (
             message.id,
             message.title,
             message.time_start,
-            message.behavior
+            message.id_agent,
+            message.tokens
         )
     
     # Se llama así ConversationSQLMapper.from_row(row)
@@ -139,7 +165,155 @@ class ConversationSQLMapper:
             id=row[0],
             title=row[1],
             time_start=row[2],
-            behavior=row[3]
+            id_agent=row[3],
+            tokens=row[4],
+        )
+
+
+class TableAgent:
+    
+    ABLE_MODELS = ("gpt-4o", "gpt-4o-mini", "gpt-5.5", "o3")
+
+    def __init__(
+            self, id:UUID, name:str, model:str, behavior:str, temperature:float,
+            presence_penalty:float, frequency_penalty:float,
+            max_tokens:int, max_input_tokens:int
+            ):
+        
+        # Valida que el id sea UUID
+        try: 
+            if isinstance(UUID(id), UUID):
+                pass
+        except:
+            raise TypeError("id must be a UUID")
+
+        # Valida que name sea un str
+        if not isinstance(name, str):
+            raise TypeError("name must be a string")
+        # Valida que el name no esté vacío
+        if not name.strip():
+            raise ValueError("name cannot be empty")
+        
+        # Valida que model sea un str
+        if not isinstance(model, str):
+            raise TypeError("model must be a string")
+        # Valida que el model no esté vacío
+        if not model.strip():
+            raise ValueError("model cannot be empty")
+        # Validar que sea un modelo usable
+        if model not in self.ABLE_MODELS:
+            raise ValueError(f"Please use one of these models: {self.ABLE_MODELS}")
+        
+        # Valida que behavior sea un str
+        if not isinstance(behavior, str):
+            raise TypeError("behavior must be a string")
+        # Valida que el behavior no esté vacío
+        if not behavior.strip():
+            raise ValueError("behavior cannot be empty")
+        
+        # Valida que temperature sea un float
+        if not isinstance(temperature, float):
+            raise TypeError("temperature must be a float")
+        # Validar que temperature sea mayor que 0
+        if temperature <= 0:
+            raise("temperature canno be less tham 0")
+        # Validar que temperature sea menor que 2
+        if temperature >= 2:
+            raise("temperature canno be greater tham 2")
+        
+        # Valida que presence_penalty sea un float
+        if not isinstance(presence_penalty, float):
+            raise TypeError("presence_penalty must be a float")
+        # Validar que presence_penalty sea mayor que 0
+        if presence_penalty <= 0:
+            raise("presence_penalty canno be less tham 0")
+        # Validar que presence_penalty sea menor que 2
+        if presence_penalty >= 2:
+            raise("presence_penalty canno be greater tham 2")
+        
+        # Valida que frequency_penalty sea un float
+        if not isinstance(frequency_penalty, float):
+            raise TypeError("frequency_penalty must be a float")
+        # Validar que frequency_penalty sea mayor que 0
+        if frequency_penalty <= 0:
+            raise("frequency_penalty canno be less tham 0")
+        # Validar que frequency_penalty sea menor que 2
+        if frequency_penalty >= 2:
+            raise("frequency_penalty canno be greater tham 2")
+        
+        # Valida que max_tokens sea un integer
+        if not isinstance(max_tokens, int):
+            raise TypeError("max_tokens must be a integer")
+        # Validar que max_tokens sea mayor que 0
+        if max_tokens <= 0:
+            raise("max_tokens canno be less tham 0")
+        
+        # Valida que max_input_tokens sea un integer
+        if not isinstance(max_input_tokens, int):
+            raise TypeError("max_input_tokens must be a integer")
+        # Validar que max_input_tokens sea mayor que 0
+        if max_input_tokens <= 0:
+            raise("max_input_tokens canno be less tham 0")
+        
+        # Id de la conversación
+        self.id = str(id) # type: UUID
+        # Nombre del agente
+        self.name = name # type: str
+        # Modelo de gpt que usará el bot
+        self.model = model # type: str
+        # Comportamiento del agente
+        self.behavior = behavior # type: str
+        # control de creatividad de las respuestas del bot
+        self.temperature = temperature # type: float
+        # Castigo de la repetición de conceptos ya mencionados
+        self.presence_penalty = presence_penalty # type: float
+        # Castigo al repetir demasiado algo
+        self.frequency_penalty = frequency_penalty # type: float
+        # Tokens maximos los cuales el bot puede usar en el output
+        self.max_tokens = max_tokens # type: int
+        # Tokens maximos los cuales el usuario puede usar en el input
+        self.max_input_tokens = max_input_tokens # type: int
+
+
+class AgentSQLMapper:
+    
+    # La columnas de la tabla
+    COLUMNS = (
+        "id", "name", "model" , "behavior", "temperature", "presence_penalty",
+        "frequency_penalty", "max_tokens", "max_input_tokens"
+        )
+
+    # Se le tiene que pasar un objeto de tipo TableConversation
+    # y usará los datos para ordenar los datos en una tupla
+    @staticmethod
+    def to_row(message: TableAgent) -> tuple:
+        return (
+            message.id,
+            message.name,
+            message.model,
+            message.behavior,
+            message.temperature,
+            message.presence_penalty,
+            message.frequency_penalty,
+            message.max_tokens,
+            message.max_input_tokens,
+        )
+    
+    # Se llama así: AgentSQLMapper.from_row(row)
+    # Retorna un objeto valido
+    @staticmethod
+    def from_row(row) -> TableAgent: 
+        # Se crea un objeto valido y lo retorna
+        return  TableAgent(
+            id=row[0],
+            name=row[1],
+            model=row[2],
+            behavior=row[3],
+            temperature=row[4],
+            presence_penalty=row[5],
+            frequency_penalty=row[6],
+            max_tokens=row[7],
+            max_input_tokens=row[8],
         )
 
 
